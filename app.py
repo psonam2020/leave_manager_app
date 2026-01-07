@@ -3,6 +3,28 @@ from auth import login
 from admin import admin_dashboard
 from employee import employee_dashboard
 
+
+
+from db import get_db
+from auth import hash_password
+
+db = get_db()
+cur = db.cursor()
+
+cur.execute("SELECT * FROM users WHERE role='admin'")
+if not cur.fetchone():
+    cur.execute("""
+        INSERT INTO users (name,email,password,role)
+        VALUES (?,?,?,?)
+    """, (
+        "Admin",
+        "admin@company.com",
+        hash_password("admin123"),
+        "admin"
+    ))
+    db.commit()
+
+
 if "user" not in st.session_state:
     st.session_state.user = None
 
