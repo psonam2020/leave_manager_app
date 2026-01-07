@@ -10,7 +10,7 @@ def verify(password, hashed):
 def login(email, password):
     db = get_db()
     cur = db.cursor()
-    cur.execute("SELECT * FROM users WHERE email=? AND is_active=1", (email,))
+    cur.execute("SELECT * FROM users WHERE email=?", (email,))
     user = cur.fetchone()
     if user and verify(password, user["password"]):
         return user
