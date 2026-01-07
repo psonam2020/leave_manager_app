@@ -24,21 +24,20 @@ if not cur.fetchone():
     ))
     db.commit()
 
-
-if "user" not in st.session_state:
-    st.session_state.user = None
-
-if not st.session_state.user:
+if st.session_state.user is None:
     st.title("Login")
+
     email = st.text_input("Email")
     pwd = st.text_input("Password", type="password")
+
     if st.button("Login"):
         user = login(email, pwd)
         if user:
             st.session_state.user = user
-            st.experimental_rerun()
+            st.rerun()   # NEW API (experimental_rerun deprecated)
         else:
-            st.error("Invalid login")
+            st.error("Invalid email or password")
+
 else:
     user = st.session_state.user
     if user["role"] == "admin":
