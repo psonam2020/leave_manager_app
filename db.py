@@ -12,9 +12,18 @@ def get_db():
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        role TEXT CHECK(role IN ('admin','employee')) NOT NULL
+        role TEXT CHECK(role IN ('admin','employee')) NOT NULL,
+        is_active INTEGER DEFAULT 1
     )
     """)
+
+    # SAFE ALTER (run once)
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1")
+    except:
+        pass
+
+
 
     # LEAVE TYPES
     cur.execute("""
