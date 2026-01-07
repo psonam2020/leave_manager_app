@@ -18,7 +18,7 @@ if not cur.fetchone():
         VALUES (?,?,?,?)
     """, (
         "Admin",
-        "admin@company.com",
+        "admin@actecal.com",
         hash_password("admin123"),
         "admin"
     ))
