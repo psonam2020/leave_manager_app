@@ -1,21 +1,19 @@
 import streamlit as st
-from auth import login
+from auth import login, hash_password
 from admin import admin_dashboard
 from employee import employee_dashboard
-
-
-
 from db import get_db
-from auth import hash_password
 
+
+# -------------------- DB INIT --------------------
 db = get_db()
 cur = db.cursor()
 
-cur.execute("SELECT * FROM users WHERE role='admin'")
+cur.execute("SELECT 1 FROM users WHERE role='admin'")
 if not cur.fetchone():
     cur.execute("""
-        INSERT INTO users (name,email,password,role)
-        VALUES (?,?,?,?)
+        INSERT INTO users (name, email, password, role)
+        VALUES (?, ?, ?, ?)
     """, (
         "Admin",
         "admin@actecal.com",
@@ -24,6 +22,13 @@ if not cur.fetchone():
     ))
     db.commit()
 
+
+# -------------------- SESSION INIT --------------------
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+
+# -------------------- LOGIN --------------------
 if st.session_state.user is None:
     st.title("Login")
 
@@ -34,17 +39,22 @@ if st.session_state.user is None:
         user = login(email, pwd)
         if user:
             st.session_state.user = user
-            st.rerun()   # NEW API (experimental_rerun deprecated)
+            st.rerun()
         else:
             st.error("Invalid email or password")
 
+
+# -------------------- DASHBOARD --------------------
 else:
     user = st.session_state.user
+
     if user["role"] == "admin":
         admin_dashboard()
     else:
         employee_dashboard(user)
 
+    st.divider()
+
     if st.button("Logout"):
         st.session_state.user = None
-        st.experimental_rerun()
+        st.rerun()
