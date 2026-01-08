@@ -1,62 +1,46 @@
 import sqlite3
 
 def get_db():
-    conn = sqlite3.connect("leave_manager.db", check_same_thread=False)
+    conn = sqlite3.connect("leave.db", check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    create_tables(conn)
+    return conn
+
+
+def create_tables(conn):
     cur = conn.cursor()
 
-    # USERS TABLE
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT CHECK(role IN ('admin','employee')) NOT NULL,
+        name TEXT,
+        email TEXT UNIQUE,
+        password TEXT,
+        role TEXT,
         is_active INTEGER DEFAULT 1
     )
     """)
 
-    # SAFE ALTER (run once)
-    try:
-        cur.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1")
-    except:
-        pass
-
-
-
-    # LEAVE TYPES
     cur.execute("""
     CREATE TABLE IF NOT EXISTS leave_types (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL
+        name TEXT,
+        total INTEGER
     )
     """)
 
-    # LEAVE BALANCE
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS leave_balance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        leave_type_id INTEGER,
-        balance INTEGER DEFAULT 0,
-        FOREIGN KEY(user_id) REFERENCES users(id)
-    )
-    """)
-
-    # LEAVE REQUESTS
     cur.execute("""
     CREATE TABLE IF NOT EXISTS leave_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         leave_type_id INTEGER,
-        from_date TEXT,
-        to_date TEXT,
-        reason TEXT,
+        start_date TEXT,
+        end_date TEXT,
+        days INTEGER,
         status TEXT DEFAULT 'pending',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(leave_type_id) REFERENCES leave_types(id)
     )
     """)
 
     conn.commit()
-    return conn
