@@ -28,32 +28,36 @@ def admin_dashboard():
     rows = cur.fetchall()
 
     if not rows:
-        st.info("No pending leave requests")
+        st.success("No pending leave requests 🎉")
         return
 
     for r in rows:
-        with st.container(border=True):
-            st.write(f"👤 **Employee:** {r['name']}")
-            st.write(f"📄 **Leave Type:** {r['leave_type']}")
-            st.write(f"📅 **From:** {r['start_date']} → {r['end_date']}")
-            st.write(f"🧮 **Days:** {r['days']}")
+        st.markdown("---")
+        st.write(f"👤 **Employee:** {r['name']}")
+        st.write(f"📄 **Leave Type:** {r['leave_type']}")
+        st.write(f"📅 **Dates:** {r['start_date']} → {r['end_date']}")
+        st.write(f"🧮 **Days:** {r['days']}")
 
-            col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-            if col1.button("Approve", key=f"approve_{r['id']}"):
-                cur.execute(
-                    "UPDATE leave_requests SET status='approved' WHERE id=?",
-                    (r["id"],)
-                )
-                db.commit()
-                st.success("Approved")
-                st.rerun()
+        # ✅ APPROVE
+        if col1.button("Approve", key=f"approve_{r['id']}"):
+            c = db.cursor()   # 🔥 NEW CURSOR
+            c.execute(
+                "UPDATE leave_requests SET status='approved' WHERE id=?",
+                (r["id"],)
+            )
+            db.commit()
+            st.success("Leave Approved ✅")
+            st.rerun()
 
-            if col2.button("Reject", key=f"reject_{r['id']}"):
-                cur.execute(
-                    "UPDATE leave_requests SET status='rejected' WHERE id=?",
-                    (r["id"],)
-                )
-                db.commit()
-                st.warning("Rejected")
-                st.rerun()
+        # ✅ REJECT
+        if col2.button("Reject", key=f"reject_{r['id']}"):
+            c = db.cursor()   # 🔥 NEW CURSOR
+            c.execute(
+                "UPDATE leave_requests SET status='rejected' WHERE id=?",
+                (r["id"],)
+            )
+            db.commit()
+            st.warning("Leave Rejected ❌")
+            st.rerun()
