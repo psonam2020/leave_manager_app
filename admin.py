@@ -1,73 +1,59 @@
 import streamlit as st
-import pandas as pd
 from db import get_db
-from auth import hash_password
+
 
 def admin_dashboard():
-    st.title("Admin Panel")
-
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["Leave Types", "Employees", "Leave Requests", "Reports"]
-    )
+    st.title("Admin Dashboard")
 
     db = get_db()
+    cur = db.cursor()
 
-    # LEAVE TYPES
-    with tab1:
-        name = st.text_input("Leave Name")
-        total = st.number_input("Yearly Count", 0)
-        if st.button("Save Leave"):
-            db.execute(
-                "INSERT OR IGNORE INTO leave_types (name,total_per_year) VALUES (?,?)",
-                (name, total)
-            )
-            db.commit()
-            st.success("Saved")
+    st.subheader("Pending Leave Requests")
 
-    # EMPLOYEE CREATE
-    with tab2:
-        name = st.text_input("Employee Name")
-        email = st.text_input("Email")
-        pwd = st.text_input("Password", type="password")
+    cur.execute("""
+        SELECT 
+            lr.id,
+            u.name,
+            lt.name AS leave_type,
+            lr.start_date,
+            lr.end_date,
+            lr.days
+        FROM leave_requests lr
+        JOIN users u ON u.id = lr.user_id
+        JOIN leave_types lt ON lt.id = lr.leave_type_id
+        WHERE lr.status = 'pending'
+        ORDER BY lr.start_date DESC
+    """)
 
-        if st.button("Create Employee"):
-            cur = db.cursor()
-            cur.execute(
-                "INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)",
-                (name, email, hash_password(pwd), "employee")
-            )
-            uid = cur.lastrowid
+    rows = cur.fetchall()
 
-            cur.execute("SELECT * FROM leave_types")
-            for lt in cur.fetchall():
+    if not rows:
+        st.info("No pending leave requests")
+        return
+
+    for r in rows:
+        with st.container(border=True):
+            st.write(f"👤 **Employee:** {r['name']}")
+            st.write(f"📄 **Leave Type:** {r['leave_type']}")
+            st.write(f"📅 **From:** {r['start_date']} → {r['end_date']}")
+            st.write(f"🧮 **Days:** {r['days']}")
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("Approve", key=f"approve_{r['id']}"):
                 cur.execute(
-                    "INSERT INTO leave_balances (user_id,leave_type_id,balance) VALUES (?,?,?)",
-                    (uid, lt["id"], lt["total_per_year"])
-                )
-            db.commit()
-            st.success("Employee created")
-
-    # LEAVE REQUESTS
-    with tab3:
-        rows = db.execute("""
-            SELECT lr.id,u.name,lt.name as leave,start_date,end_date,days
-            FROM leave_requests lr
-            JOIN users u ON u.id=lr.user_id
-            JOIN leave_types lt ON lt.id=lr.leave_type_id
-            WHERE lr.status='pending'
-        """).fetchall()
-
-        for r in rows:
-            st.write(r["name"], r["leave"], r["start_date"], r["end_date"])
-            if st.button("Approve", key=f"a{r['id']}"):
-                db.execute(
-                    "UPDATE leave_requests SET status='approved', actioned_at=CURRENT_TIMESTAMP WHERE id=?",
+                    "UPDATE leave_requests SET status='approved' WHERE id=?",
                     (r["id"],)
                 )
                 db.commit()
                 st.success("Approved")
+                st.rerun()
 
-    # REPORTS
-    with tab4:
-        data = pd.read_sql("SELECT * FROM leave_requests", db)
-        st.dataframe(data)
+            if col2.button("Reject", key=f"reject_{r['id']}"):
+                cur.execute(
+                    "UPDATE leave_requests SET status='rejected' WHERE id=?",
+                    (r["id"],)
+                )
+                db.commit()
+                st.warning("Rejected")
+                st.rerun()
